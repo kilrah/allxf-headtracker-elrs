@@ -87,8 +87,12 @@ void setup() {
 
   // Set up Wifi at low power
   WiFi.mode(WIFI_STA);
-  WiFi.setTxPower(WIFI_POWER);
   esp_wifi_set_mac(WIFI_IF_STA, uid);
+  WiFi.setTxPower(WIFI_POWER);
+
+  // Set channel to 1 (hardcoded in all Backpack modules)
+  WiFi.begin("", "", 1);
+  WiFi.disconnect();
 
   // Init ESP-NOW
   if (esp_now_init() != 0) {
