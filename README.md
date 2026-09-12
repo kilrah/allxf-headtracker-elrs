@@ -6,7 +6,7 @@ This provides a local low power link between headtracker and radio instead of ha
 
 ## Requirements
 
-- **Hardware:** Any ESP32-family board (ESP32, S2, S3, C3, C6)
+- **Hardware:** Any ESP32-family board (ESP32, S2, S3, C3, C6) and an ELRS TX module with backpack running at least ELRS 4.0
 - **Software:** Arduino IDE with the ESP32 board package installed
 
 ## Setup
