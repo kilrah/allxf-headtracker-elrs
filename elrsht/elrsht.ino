@@ -1,4 +1,5 @@
-// Bridge from AllXF Headtracker UART to ELRS backpack
+// https://github.com/kilrah/allxf-headtracker-elrs
+// Bridge from AllXF UART or PPM Headtracker to ELRS backpack over esp-now using ESP32
 
 // msp.h and some other bits from https://github.com/jlpoltrack/ELRS-Headtracker-to-SBUS/
 
@@ -7,54 +8,76 @@
 #include <WiFi.h>
 #include <mbedtls/md5.h>
 #include <msp.h>
+#include <ESP32_ppm.h>
+#include "allxf.h"
 
-// Must match your ELRS / Backpack setup
-#define BINDING_PHRASE   "MY_BINDING_PHRASE"  
-#define RX_PIN           4 // Connects to T on headtracker
-#define LED              8 // Board LED
-#define WIFI_POWER       WIFI_POWER_2dBm // see https://github.com/espressif/arduino-esp32/blob/master/libraries/WiFi/src/WiFiGeneric.h#L51 for available values
+// --------- CONFIG ------------
+// Common
+#define BINDING_PHRASE   "MY_PHRASE"       // Must match your ELRS / Backpack setup
+#define LED              8                 // Board LED
+#define WIFI_POWER       WIFI_POWER_2dBm   // see https://github.com/espressif/arduino-esp32/blob/master/libraries/WiFi/src/WiFiGeneric.h#L51 for available values
 
-uint8_t rxBuf[8];
-uint8_t rx_count;
+// AllXF
+#define RX_PIN           4                 // Connects to T on headtracker
 
+// PPM
+#define PPM_PIN          3                 // Where the input signal is connected
+#define PPM_PAN_CHAN     5                 // Channels used for each function, use 0 if unused
+#define PPM_TILT_CHAN    6
+#define PPM_ROLL_CHAN    0
+
+// -------- GLOBALS ----------
+// allxf vars
+uint8_t allxf_rxBuf[8];
+uint8_t allxf_rxCount;
+allxf_htMessage_t allxf_htMsg;
+allxf_htState_t allxf_htState = STATE_WAIT_FOOTER;
+
+// elrs uid
 uint8_t uid[6];
 
-const uint8_t ht_message_header = 0x5A;
-const uint8_t ht_message_footer = 0xA5;
+// ppm vars
+ppmReader ppmRx;
+int* ppmArray;
 
-// From Ardupilot, https://github.com/Hwurzburg/ardupilot/blob/5a4f7b50058825af34de3f0f73198a7733186df5/libraries/AP_Mount/AP_Mount_CADDX.h#L65
-typedef struct __attribute__  ((packed)) {
-	uint8_t  mode:3;        // Gimbal Mode [0~7] [Only 0 1 2 modes are supported for the time being]
-	int16_t  sensitivity:5; // Stabilization sensibility [-15~15]
-	uint8_t  reserved:4;    
-	int32_t  roll:12;       // Roll angle [-2048~2047] => [-180~180]
-	int32_t  tilt:12;       // Pitch angle [-2048~2047] => [-180~180]
-	int32_t  pan:12;        // Yaw angle [-2048~2047] => [-180~180]
-	uint8_t  crch;          // Data validation H
-	uint8_t  crcl;          // Data validation L
-} ht_message_t;
-
-typedef enum {
-  STATE_NEW_MESSAGE,
-  STATE_RECEIVING,
-  STATE_WAIT_FOOTER
-} ht_state_t;
-
-ht_message_t ht_msg;
-ht_state_t ht_state = STATE_WAIT_FOOTER;
-
+// -------- TX functions --------
 void sendMspEspNow(uint16_t function, const uint8_t *data, uint16_t len) {
     uint8_t frame[32];
     uint8_t frameLen = mspBuildCommand(frame, sizeof(frame), function, data, len);
     if (frameLen) esp_now_send(uid, frame, frameLen);
 }
 
-void sendHTPacket() {
+void sendAllxfHtPacket() {
     int16_t angles[3];
-    angles[0] = (ht_msg.pan+2048)/2;
-    angles[1] = (ht_msg.tilt+2048)/2;
-    angles[2] = (ht_msg.roll+2048)/2;
+    angles[0] = constrain((allxf_htMsg.pan+2048)/2, 0, 2000);
+    angles[1] = constrain((allxf_htMsg.tilt+2048)/2, 0, 2000);
+    angles[2] = constrain((allxf_htMsg.roll+2048)/2, 0, 2000);
     sendMspEspNow(MSP_ELRS_SET_PTR, (uint8_t*) angles, 6);
+}
+
+void sendPpmHtPacket() {
+    int16_t angles[3];
+
+    if(ppmArray[0] < max(PPM_PAN_CHAN, max(PPM_TILT_CHAN, PPM_ROLL_CHAN))) // Got fewer channels than set up for
+      return;
+
+    if(PPM_PAN_CHAN)
+      angles[0] = constrain((ppmArray[PPM_PAN_CHAN]-1000)*2, 0, 2000);
+    else
+      angles[0] = 1000;
+
+    if(PPM_TILT_CHAN)
+      angles[1] = constrain((ppmArray[PPM_TILT_CHAN]-1000)*2, 0, 2000);
+    else
+      angles[1] = 1000;
+
+    if(PPM_ROLL_CHAN)
+      angles[2] = constrain((ppmArray[PPM_ROLL_CHAN]-1000)*2, 0, 2000);
+    else
+      angles[2] = 1000;
+
+    sendMspEspNow(MSP_ELRS_SET_PTR, (uint8_t*) angles, 6);
+    Serial.printf("ppm chans: %d\tpan: %6d\ttilt: %6d\troll: %6d\n", ppmArray[0], angles[0], angles[1], angles[2]);
 }
 
 // Replicates ELRS build system: MD5('-DMY_BINDING_PHRASE="<phrase>"')[0:6]
@@ -74,15 +97,45 @@ void generateUID(const char *phrase, uint8_t *out) {
   out[0] &= ~0x01;  // Ensure unicast (clear LSB of first byte)
 }
 
+// ----------- AllXF receive handler ---------
+bool processAllxfHt(void) {
+  if(Serial1.available()) {
+    uint8_t data = Serial1.read();
+
+    if(allxf_htState == STATE_RECEIVING) {
+      allxf_rxBuf[allxf_rxCount++] = data;
+      if(allxf_rxCount == sizeof(allxf_rxBuf)) {
+        allxf_htState = STATE_WAIT_FOOTER;
+      }
+    }
+
+    else if(allxf_htState == STATE_NEW_MESSAGE && data == allxf_ht_message_header) {
+      allxf_htState = STATE_RECEIVING;
+      allxf_rxCount = 0;
+    }
+
+    else if(allxf_htState == STATE_WAIT_FOOTER && data == allxf_ht_message_footer) {
+      allxf_htState = STATE_NEW_MESSAGE;
+      uint8_t* ptr = (uint8_t*)&allxf_htMsg;
+      memcpy(ptr, allxf_rxBuf, sizeof(allxf_rxBuf));
+      Serial.printf("allxf mode: %d\tsens: %3d\troll: %6d\ttilt: %6d\tpan: %6d\n", allxf_htMsg.mode, allxf_htMsg.sensitivity, allxf_htMsg.roll, allxf_htMsg.tilt, allxf_htMsg.pan);
+      return true;
+    }
+  }
+  return false;
+}
+
 void setup() {
   Serial.begin(115200);
 
-  // HT UART
+  // Setup HT UART
+  pinMode(RX_PIN, INPUT_PULLUP);
   Serial1.begin(115200, SERIAL_8N1, RX_PIN, -1);
 
   pinMode(LED, OUTPUT);
   digitalWrite(LED, LOW);
 
+  // Generate ELRS UID from binding phrase
   generateUID(BINDING_PHRASE, uid);
 
   // Set up Wifi at low power
@@ -94,7 +147,7 @@ void setup() {
   WiFi.begin("", "", 1);
   WiFi.disconnect();
 
-  // Init ESP-NOW
+  // Set up ESP-NOW
   if (esp_now_init() != 0) {
     Serial.println("Error initializing ESP-NOW");
     return;
@@ -106,32 +159,21 @@ void setup() {
   if (esp_now_add_peer(&peer) != ESP_OK)
       Serial.print("ESP-NOW add peer failed\n");
 
+  // Start PPM receiver
+  pinMode(PPM_PIN, INPUT_PULLUP);
+  ppmArray = ppmRx.begin(PPM_PIN);
+  ppmRx.start();
 }
 
 void loop() {
   // Read HT
-  if(Serial1.available()) {
-    uint8_t data = Serial1.read();
-
-    if(ht_state == STATE_RECEIVING) {
-      rxBuf[rx_count++] = data;
-      if(rx_count == sizeof(rxBuf)) {
-        ht_state = STATE_WAIT_FOOTER;
-      }
-    }
-
-    else if(ht_state == STATE_NEW_MESSAGE && data == ht_message_header) {
-      ht_state = STATE_RECEIVING;
-      rx_count = 0;
-    }
-
-    else if(ht_state == STATE_WAIT_FOOTER && data == ht_message_footer) {
-      ht_state = STATE_NEW_MESSAGE;
-      uint8_t* ptr = (uint8_t*)&ht_msg;
-      memcpy(ptr, rxBuf, sizeof(rxBuf));
-      sendHTPacket();
-      digitalWrite(LED, !digitalRead(LED));
-      Serial.printf("mode: %d\tsens: %3d\troll: %6d\tpitch: %6d\tyaw: %6d\n", ht_msg.mode, ht_msg.sensitivity, ht_msg.roll, ht_msg.tilt, ht_msg.pan);
-    }
+  if(processAllxfHt()) {
+    sendAllxfHtPacket();
+    digitalWrite(LED, !digitalRead(LED));
+  }
+  if(ppmRx.newFrame()) {
+    sendPpmHtPacket();
+    digitalWrite(LED, !digitalRead(LED));
   }
 }
+
