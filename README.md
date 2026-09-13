@@ -25,13 +25,10 @@ Open `elrsht.ino` and edit the options at the top:
 ```cpp
 #define BINDING_PHRASE   "MY_PHRASE"  
 #define LED              8
-#define WIFI_POWER       WIFI_POWER_2dBm
 ```
 
 - **`BINDING_PHRASE`** must exactly match the binding phrase configured in your ELRS/Backpack setup.
 - **`LED`** is the pin your board's LED is connected to.
-- **`WIFI_POWER`** is set to a low 2dBm by default to minimize the potential for interference and reduce power consumption since the link only needs to reach from your head to the radio - if it needs tweaking for your board/setup the available values are listed [here](https://github.com/espressif/arduino-esp32/blob/master/libraries/WiFi/src/WiFiGeneric.h#L51).
-
 
 #### AllXF settings
 ```cpp

@@ -1,5 +1,5 @@
 // https://github.com/kilrah/allxf-headtracker-elrs
-// Bridge from AllXF UART or PPM Headtracker to ELRS backpack over esp-now using ESP32
+// Bridge from AllXF UART Headtracker or any PPM source to ELRS backpack over esp-now using ESP32
 
 // msp.h and some other bits from https://github.com/jlpoltrack/ELRS-Headtracker-to-SBUS/
 
@@ -15,7 +15,6 @@
 // Common
 #define BINDING_PHRASE   "MY_PHRASE"       // Must match your ELRS / Backpack setup
 #define LED              8                 // Board LED
-#define WIFI_POWER       WIFI_POWER_2dBm   // see https://github.com/espressif/arduino-esp32/blob/master/libraries/WiFi/src/WiFiGeneric.h#L51 for available values
 
 // AllXF
 #define RX_PIN           4                 // Connects to T on headtracker
@@ -124,10 +123,9 @@ void setup() {
   // Generate ELRS UID from binding phrase
   generateUID(BINDING_PHRASE, uid);
 
-  // Set up Wifi at low power
+  // Set up Wifi
   WiFi.mode(WIFI_STA);
   esp_wifi_set_mac(WIFI_IF_STA, uid);
-  WiFi.setTxPower(WIFI_POWER);
 
   // Set channel to 1 (hardcoded in all Backpack modules)
   WiFi.begin("", "", 1);
