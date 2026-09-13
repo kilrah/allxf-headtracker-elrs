@@ -6,15 +6,15 @@ This provides a local low power link between headtracker and radio instead of ha
 
 ## Requirements
 
-- **Hardware:** Any ESP32-family board (ESP32, S2, S3, C3, C6) and an ELRS TX module with backpack running at least ELRS 4.0
-- **Software:** Arduino IDE with the ESP32 board package installed, [ESP32_ppm](https://github.com/fanfanlatulipe26/ESP32_ppm) library
+- **Hardware:** Any ESP32-family board (ESP32, S2, S3, C3, C6) and an ELRS TX module with backpack running at least ELRS 4.0.
+- **Software:** Arduino IDE with the ESP32 board package installed, [ESP32_ppm](https://github.com/fanfanlatulipe26/ESP32_ppm) library.
 
 ## Setup
 
 ### 1. Install the ESP32 Board Package and dependencies
 
 - In Arduino IDE, go to **File > Preferences** and add the ESP32 board manager URL, then install the **esp32** package via the **Boards Manager** in the left menu.
-- Open the **Library manager** in the left menu, search and install **ESP32_ppm**
+- Open the **Library manager** in the left menu, search and install **ESP32_ppm**.
 
 ### 2. Configure the Sketch
 
@@ -28,7 +28,7 @@ Open `elrsht.ino` and edit the options at the top:
 ```
 
 - **`BINDING_PHRASE`** must exactly match the binding phrase configured in your ELRS/Backpack setup.
-- **`LED`** is the pin your board's LED is connected to
+- **`LED`** is the pin your board's LED is connected to.
 - **`WIFI_POWER`** is set to a low 2dBm by default to minimize the potential for interference and reduce power consumption since the link only needs to reach from your head to the radio - if it needs tweaking for your board/setup the available values are listed [here](https://github.com/espressif/arduino-esp32/blob/master/libraries/WiFi/src/WiFiGeneric.h#L51).
 
 
@@ -36,7 +36,7 @@ Open `elrsht.ino` and edit the options at the top:
 ```cpp
 #define RX_PIN           4 
 ```
-- **`RX_PIN`** is the pin connected to the headtracker's UART "T" pin
+- **`RX_PIN`** is the pin connected to the headtracker's UART "T" pin.
 
 #### PPM Settings
 ```cpp
@@ -45,7 +45,7 @@ Open `elrsht.ino` and edit the options at the top:
 #define PPM_TILT_CHAN    6
 #define PPM_ROLL_CHAN    0
 ```
-- **`PPM_PIN`** is the pin you connected the PPM signal to
+- **`PPM_PIN`** is the pin you connected the PPM signal to.
 - **`PPM_PAN_CHAN`**, **`PPM_TILT_CHAN`**, **`PPM_ROLL_CHAN`** are the PPM channels the values are sent as, starting from 1. Use 0 if the headtracker does not supply that value.
 
 ### 3. Upload
@@ -55,8 +55,8 @@ Select your ESP32 board and port in the IDE, then upload. You can also select th
 ### 4. Wiring
 
 #### AllXF Headtracker
-- Connect + and - from the headtracker to the 5V and ground pins of your board
-- Connect either `RX_PIN` to the headtracker's UART "T" pin
+- Connect + and - from the headtracker to the 5V and ground pins of your board.
+- Connect `RX_PIN` to the headtracker's UART "T" pin.
 
 Example:
 
@@ -67,9 +67,9 @@ Connect `PPM_PIN` to the PPM output of your generic headtracker, and power both 
 
 ### 5. EdgeTX Radio Setup
 
-1. On your radio, open the ExpressLRS Lua script in the Apps menu, go to **Backpack**, set  **HT Enable** to ON and **HT Start Channel** to EdgeTX
-2. Go to **Model Settings > Trainer** and select **Master/CRSF** 
-4. In your **Mixes**, use the **TRx** inputs (TR1, TR2, TR3) to map the head tracker channels to your desired outputs
+1. On your radio, open the ExpressLRS Lua script in the Apps menu, go to **Backpack**, set  **HT Enable** to ON and **HT Start Channel** to EdgeTX.
+2. Go to **Model Settings > Trainer** and select **Master/CRSF** .
+4. In your **Mixes**, use the **TRx** inputs (TR1, TR2, TR3) to map the head tracker channels to your desired outputs.
 
 See the [ELRS doc](https://www.expresslrs.org/software/trainer-input/#hdzero-goggle-head-tracking) for info about other options e.g. not going through the radio mixers.
 
