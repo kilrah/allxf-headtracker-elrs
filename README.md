@@ -1,6 +1,7 @@
-# AllXF/PPM Headtracker to ELRS Backpack bridge
+# AllXF Headtracker / PPM to ELRS Backpack bridge
 
-An ESP32 Arduino sketch that reads either the UART output of an AllXF Headtracker or a PPM signal and sends the pan/tilt/roll angles to an ELRS Backpack (integrated in all modern ELRS TX modules) via ESP-NOW.  
+An ESP32 Arduino sketch that reads the UART output of an AllXF Headtracker and sends the pan/tilt/roll angles to an ELRS Backpack (integrated in all modern ELRS TX modules) via ESP-NOW.  
+Alternatively also supports capturing and sending any PPM signal the same way, tested up to 16 channels. 
 
 This provides a local low power link between headtracker and radio instead of having to install a whole second long range RF system directly to the gimbal, and preserves the ability to mix the HT channels in the radio without extra hardware. The board is powered by the headtracker directly, so nothing extra to install/charge/maintain.
 
@@ -41,12 +42,9 @@ Open `elrsht.ino` and edit the options at the top:
 #### PPM Settings
 ```cpp
 #define PPM_PIN          3
-#define PPM_PAN_CHAN     5
-#define PPM_TILT_CHAN    6
-#define PPM_ROLL_CHAN    0
 ```
 - **`PPM_PIN`** is the pin you connected the PPM signal to.
-- **`PPM_PAN_CHAN`**, **`PPM_TILT_CHAN`**, **`PPM_ROLL_CHAN`** are the PPM channels the values are sent as, starting from 1. Use 0 if the headtracker does not supply that value.
+
 
 ### 3. Upload
 
@@ -69,7 +67,7 @@ Connect `PPM_PIN` to the PPM output of your generic headtracker, and power both 
 
 1. On your radio, open the ExpressLRS Lua script in the Apps menu, go to **Backpack**, set  **HT Enable** to ON and **HT Start Channel** to EdgeTX.
 2. Go to **Model Settings > Trainer** and select **Master/CRSF** .
-4. In your **Mixes**, use the **TRx** inputs (TR1, TR2, TR3) to map the head tracker channels to your desired outputs.
+4. In your **Mixes**, use the **TRx** inputs (TR1, TR2, TR3,...) to map the head tracker channels to your desired outputs.
 
 See the [ELRS doc](https://www.expresslrs.org/software/trainer-input/#hdzero-goggle-head-tracking) for info about other options e.g. not going through the radio mixers.
 

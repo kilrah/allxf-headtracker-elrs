@@ -21,10 +21,7 @@
 #define RX_PIN           4                 // Connects to T on headtracker
 
 // PPM
-#define PPM_PIN          3                 // Where the input signal is connected
-#define PPM_PAN_CHAN     5                 // Channels used for each function, use 0 if unused
-#define PPM_TILT_CHAN    6
-#define PPM_ROLL_CHAN    0
+#define PPM_PIN          3                 // Where the input PPM signal is connected
 
 // -------- GLOBALS ----------
 // allxf vars
@@ -42,7 +39,7 @@ int* ppmArray;
 
 // -------- TX functions --------
 void sendMspEspNow(uint16_t function, const uint8_t *data, uint16_t len) {
-    uint8_t frame[32];
+    uint8_t frame[64];
     uint8_t frameLen = mspBuildCommand(frame, sizeof(frame), function, data, len);
     if (frameLen) esp_now_send(uid, frame, frameLen);
 }
@@ -52,32 +49,21 @@ void sendAllxfHtPacket() {
     angles[0] = constrain((allxf_htMsg.pan+2048)/2, 0, 2000);
     angles[1] = constrain((allxf_htMsg.tilt+2048)/2, 0, 2000);
     angles[2] = constrain((allxf_htMsg.roll+2048)/2, 0, 2000);
-    sendMspEspNow(MSP_ELRS_SET_PTR, (uint8_t*) angles, 6);
+    sendMspEspNow(MSP_ELRS_SET_PTR, (uint8_t*) angles, sizeof(angles));
 }
 
 void sendPpmHtPacket() {
-    int16_t angles[3];
+    uint8_t channelCount = ppmArray[0];
+    int16_t angles[channelCount];
 
-    if(ppmArray[0] < max(PPM_PAN_CHAN, max(PPM_TILT_CHAN, PPM_ROLL_CHAN))) // Got fewer channels than set up for
-      return;
+    for(uint8_t i = 0; i < channelCount; i++)
+      angles[i] = constrain((ppmArray[i+1]-1000)*2, 0, 2000);
 
-    if(PPM_PAN_CHAN)
-      angles[0] = constrain((ppmArray[PPM_PAN_CHAN]-1000)*2, 0, 2000);
-    else
-      angles[0] = 1000;
-
-    if(PPM_TILT_CHAN)
-      angles[1] = constrain((ppmArray[PPM_TILT_CHAN]-1000)*2, 0, 2000);
-    else
-      angles[1] = 1000;
-
-    if(PPM_ROLL_CHAN)
-      angles[2] = constrain((ppmArray[PPM_ROLL_CHAN]-1000)*2, 0, 2000);
-    else
-      angles[2] = 1000;
-
-    sendMspEspNow(MSP_ELRS_SET_PTR, (uint8_t*) angles, 6);
-    Serial.printf("ppm chans: %d\tpan: %6d\ttilt: %6d\troll: %6d\n", ppmArray[0], angles[0], angles[1], angles[2]);
+    sendMspEspNow(MSP_ELRS_SET_PTR, (uint8_t*) angles, sizeof(angles));
+    Serial.printf("ppm chans: %d\t", channelCount);
+    for(uint8_t i = 0; i < channelCount; i++)
+      Serial.printf("%d\t",angles[i]);
+    Serial.println();
 }
 
 // Replicates ELRS build system: MD5('-DMY_BINDING_PHRASE="<phrase>"')[0:6]
