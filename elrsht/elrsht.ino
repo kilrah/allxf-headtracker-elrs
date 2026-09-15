@@ -44,24 +44,26 @@ void sendMspEspNow(uint16_t function, const uint8_t *data, uint16_t len) {
 }
 
 void sendAllxfHtPacket() {
-    int16_t angles[3];
-    angles[0] = constrain((allxf_htMsg.pan+2048)/2, 0, 2000);
-    angles[1] = constrain((allxf_htMsg.tilt+2048)/2, 0, 2000);
-    angles[2] = constrain((allxf_htMsg.roll+2048)/2, 0, 2000);
-    sendMspEspNow(MSP_ELRS_SET_PTR, (uint8_t*) angles, sizeof(angles));
+    int16_t channels[5];
+    channels[0] = constrain((allxf_htMsg.pan+2048)/2, 0, 2000);
+    channels[1] = constrain((allxf_htMsg.tilt+2048)/2, 0, 2000);
+    channels[2] = constrain((allxf_htMsg.roll+2048)/2, 0, 2000);
+    channels[3] = map(allxf_htMsg.mode, 0, 2, 0, 2000);
+    channels[4] = map(allxf_htMsg.sensitivity, -15, 15, 100, 1900);
+    sendMspEspNow(MSP_ELRS_SET_PTR, (uint8_t*) channels, sizeof(channels));
 }
 
 void sendPpmHtPacket() {
     uint8_t channelCount = ppmArray[0];
-    int16_t angles[channelCount];
+    int16_t channels[channelCount];
 
     for(uint8_t i = 0; i < channelCount; i++)
-      angles[i] = constrain((ppmArray[i+1]-1000)*2, 0, 2000);
+      channels[i] = constrain((ppmArray[i+1]-1000)*2, 0, 2000);
 
-    sendMspEspNow(MSP_ELRS_SET_PTR, (uint8_t*) angles, sizeof(angles));
+    sendMspEspNow(MSP_ELRS_SET_PTR, (uint8_t*) channels, sizeof(channels));
     Serial.printf("ppm chans: %d\t", channelCount);
     for(uint8_t i = 0; i < channelCount; i++)
-      Serial.printf("%d\t",angles[i]);
+      Serial.printf("%d\t",channels[i]);
     Serial.println();
 }
 
