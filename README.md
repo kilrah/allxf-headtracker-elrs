@@ -53,9 +53,13 @@ Select your ESP32 board and port in the IDE, then upload. You can also select th
 - Connect + and - from the headtracker to the 5V and ground pins of your board.
 - Connect `RX_PIN` to the headtracker's UART "T" pin.
 
-Example:
+Example build:
 
 ![example](images/c3_supermini.jpg)
+
+Video:
+
+[![video](https://img.youtube.com/vi/rCwJBpO2tYA/0.jpg)](https://youtu.be/rCwJBpO2tYA=)
 
 #### PPM Headtracker
 Connect `PPM_PIN` to the PPM output of your generic headtracker, and power both the tracker and ESP as appropriate. Make sure the grounds are connected if using separate supplies. 
