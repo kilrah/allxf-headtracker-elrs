@@ -14,7 +14,7 @@ This provides a local low power link between headtracker and radio instead of ha
 
 ### 1. Install the ESP32 Board Package and dependencies
 
-- In Arduino IDE, go to **File > Preferences** and add the ESP32 board manager URL, then install the **esp32** package via the **Boards Manager** in the left menu.
+- In Arduino IDE, go to **File > Preferences** and add the ESP32 board manager URL (https://espressif.github.io/arduino-esp32/package_esp32_index.json), then install the **esp32** package via the **Boards Manager** in the left menu.
 - Open the **Library manager** in the left menu, search and install **ESP32_ppm**.
 
 ### 2. Configure the Sketch
