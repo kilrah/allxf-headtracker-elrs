@@ -47,11 +47,12 @@ Open `elrsht.ino` and edit the options at the top:
 
 Select your ESP32 board and port in the IDE, then upload. You can also select the lowest CPU frequency that lists Wifi as being available to reduce power consumption. 
 
-### 4. Wiring
+### 4. Wiring / Setup
 
 #### AllXF Headtracker
 - Connect + and - from the headtracker to the 5V and ground pins of your board.
 - Connect `RX_PIN` to the headtracker's UART "T" pin.
+- Make sure the headtracker is set to `C Series Gimbal` in the bottom-right dropdown of the configurator software.
 
 Example build:
 
